@@ -50,3 +50,16 @@ fun List<Playlist>.filterYoutubeShorts(enabled: Boolean = false) =
     } else {
         this
     }
+
+private val songNoiseRegex = Regex("(?i)\\(official.*?\\)|\\[official.*?]|\\(audio\\)|\\(lyric.*?\\)|official video|official audio|4k|hd")
+
+fun Song.deduplicationKey(): String {
+    val cleanTitle = song.title
+        .replace(songNoiseRegex, "")
+        .normalizeForSearch()
+    val primaryArtist = orderedArtists.firstOrNull()?.name?.normalizeForSearch() ?: ""
+    val durationBucket = if (song.duration > 0) song.duration / 3 else 0
+    return if (cleanTitle.isBlank()) song.id else "$cleanTitle|$primaryArtist|$durationBucket"
+}
+
+fun List<Song>.deduplicateSongs(): List<Song> = distinctBy { it.deduplicationKey() }

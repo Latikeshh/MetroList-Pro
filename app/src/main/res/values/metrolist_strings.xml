@@ -883,6 +883,13 @@
     <string name="filter_episodes">Episodes</string>
     <string name="filter_profiles">Profiles</string>
     <string name="filter_channels">Channels</string>
+
+    <!-- Public Export -->
+    <string name="export_to_storage">Export audio to public storage</string>
+    <string name="exporting_audio">Exporting audio file…</string>
+    <string name="exported_to_storage">Saved to Music/Metrolist</string>
+    <string name="already_exported_to_storage">File already exists in Music/Metrolist</string>
+    <string name="export_audio_failed">Failed to export audio file</string>
     <string name="auto_playlist">Auto playlist</string>
     <string name="downloaded_episodes">Downloaded episodes</string>
     <string name="no_subscribed_channels">No subscribed channels</string>

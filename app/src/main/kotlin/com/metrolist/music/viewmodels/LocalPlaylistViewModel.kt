@@ -3,6 +3,8 @@
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
+@file:OptIn(kotlinx.coroutines.FlowPreview::class)
+
 package com.metrolist.music.viewmodels
 
 import android.content.Context
@@ -17,6 +19,8 @@ import com.metrolist.music.constants.PlaylistSongSortType
 import com.metrolist.music.constants.PlaylistSongSortTypeKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.PlaylistSong
+import com.metrolist.music.extensions.matchesNormalizedQuery
+import com.metrolist.music.extensions.normalizeForSearch
 import com.metrolist.music.extensions.reversed
 import com.metrolist.music.extensions.toEnum
 import com.metrolist.music.utils.dataStore
@@ -26,7 +30,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -53,6 +59,17 @@ constructor(
 
     private val _onlinePlaylist = MutableStateFlow<PlaylistItem?>(null)
     val onlinePlaylist: StateFlow<PlaylistItem?> = _onlinePlaylist
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+    val debouncedSearchQuery = _searchQuery
+        .debounce(300)
+        .stateIn(viewModelScope, SharingStarted.Lazily, "")
+
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
     val playlistSongs: StateFlow<List<PlaylistSong>> =
         combine(
             database.playlistSongs(playlistId),
@@ -64,13 +81,14 @@ constructor(
                         it[HideVideoSongsKey] ?: false
                     )
                 }.distinctUntilChanged(),
-        ) { songs, (sortType, sortDescending, hideVideoSongs) ->
+            debouncedSearchQuery,
+        ) { songs, (sortType, sortDescending, hideVideoSongs), query ->
             val filteredSongs = if (hideVideoSongs) {
                 songs.filter { !it.song.song.isVideo }
             } else {
                 songs
             }
-            when (sortType) {
+            val sortedSongs = when (sortType) {
                 PlaylistSongSortType.CUSTOM -> filteredSongs
                 PlaylistSongSortType.CREATE_DATE -> filteredSongs.sortedBy { it.map.id }
                 PlaylistSongSortType.NAME -> {
@@ -89,6 +107,19 @@ constructor(
 
                 PlaylistSongSortType.PLAY_TIME -> filteredSongs.sortedBy { it.song.song.totalPlayTime }
             }.reversed(sortDescending && sortType != PlaylistSongSortType.CUSTOM)
+
+            val normalizedQuery = query.normalizeForSearch()
+            if (normalizedQuery.isBlank()) {
+                sortedSongs
+            } else {
+                sortedSongs.filter { playlistSong ->
+                    matchesNormalizedQuery(
+                        normalizedQuery,
+                        playlistSong.song.song.title,
+                        playlistSong.song.artists.joinToString(" ") { it.name },
+                    )
+                }
+            }
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     init {

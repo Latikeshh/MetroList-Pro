@@ -82,6 +82,7 @@ import com.metrolist.music.db.entities.Song
 import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.toMediaMetadata
+import com.metrolist.music.utils.LatikeshExporter
 import com.metrolist.music.playback.ExoDownloadService
 import com.metrolist.music.playback.queues.YouTubeQueue
 import com.metrolist.music.ui.component.DefaultDialog
@@ -959,6 +960,22 @@ fun SongMenu(
                                 )
                             }
                         },
+                        Material3MenuItemData(
+                            title = { Text(text = stringResource(R.string.export_to_storage)) },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.storage),
+                                    contentDescription = null,
+                                )
+                            },
+                            onClick = {
+                                LatikeshExporter.exportToPublicStorage(
+                                    context = context,
+                                    mediaMetadata = song.toMediaMetadata(),
+                                )
+                                onDismiss()
+                            },
+                        ),
                     ),
             )
         }

@@ -40,6 +40,7 @@ import com.metrolist.music.constants.SongSortType
 import com.metrolist.music.constants.SongSortTypeKey
 import com.metrolist.music.constants.TopSize
 import com.metrolist.music.db.MusicDatabase
+import com.metrolist.music.extensions.deduplicateSongs
 import com.metrolist.music.extensions.filterExplicit
 import com.metrolist.music.extensions.filterExplicitAlbums
 import com.metrolist.music.extensions.filterVideoSongs
@@ -106,10 +107,10 @@ constructor(
             .flatMapLatest { (filterSort, hideExplicit, hideVideoSongs) ->
                 val (filter, sortType, descending) = filterSort
                 when (filter) {
-                    SongFilter.LIBRARY -> database.songs(sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).distinctBy { song -> song.id } }
-                    SongFilter.LIKED -> database.likedSongs(sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).distinctBy { song -> song.id } }
-                    SongFilter.DOWNLOADED -> database.downloadedSongs(sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).distinctBy { song -> song.id } }
-                    SongFilter.UPLOADED -> database.uploadedSongs(sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).distinctBy { song -> song.id } }
+                    SongFilter.LIBRARY -> database.songs(sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).deduplicateSongs() }
+                    SongFilter.LIKED -> database.likedSongs(sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).deduplicateSongs() }
+                    SongFilter.DOWNLOADED -> database.downloadedSongs(sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).deduplicateSongs() }
+                    SongFilter.UPLOADED -> database.uploadedSongs(sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).deduplicateSongs() }
                 }
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -282,17 +283,29 @@ constructor(
     }
 
     val allPlaylists =
-        context.dataStore.data
-            .map {
-                Triple(
-                    it[PlaylistSortTypeKey].toEnum(PlaylistSortType.CREATE_DATE),
-                    it[PlaylistSortDescendingKey] ?: true,
-                    it[HideYoutubeShortsKey] ?: false
-                )
-            }.distinctUntilChanged()
-            .flatMapLatest { (sortType, descending, hideYoutubeShorts) ->
-                database.playlists(sortType, descending).map { it.filterYoutubeShorts(hideYoutubeShorts) }
-            }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        combine(
+            context.dataStore.data
+                .map {
+                    Triple(
+                        it[PlaylistSortTypeKey].toEnum(PlaylistSortType.CREATE_DATE),
+                        it[PlaylistSortDescendingKey] ?: true,
+                        it[HideYoutubeShortsKey] ?: false
+                    )
+                }.distinctUntilChanged()
+                .flatMapLatest { (sortType, descending, hideYoutubeShorts) ->
+                    database.playlists(sortType, descending).map { it.filterYoutubeShorts(hideYoutubeShorts) }
+                },
+            debouncedSearchQuery,
+        ) { playlists, query ->
+            val normalizedQuery = query.normalizeForSearch()
+            if (normalizedQuery.isBlank()) {
+                playlists
+            } else {
+                playlists.filter { playlist ->
+                    matchesNormalizedQuery(normalizedQuery, playlist.playlist.name)
+                }
+            }
+        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun sync() {
         viewModelScope.launch(Dispatchers.IO) { syncUtils.syncSavedPlaylists() }
