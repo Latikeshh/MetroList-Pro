@@ -13,6 +13,12 @@ import com.metrolist.music.models.MediaMetadata
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.withContext
 
+/**
+ * Queue implementation for YouTube Music player streams and radio queues.
+ *
+ * @property endpoint Initial watch endpoint.
+ * @property preloadItem Optional preloaded media metadata.
+ */
 class YouTubeQueue(
     private var endpoint: WatchEndpoint,
     override val preloadItem: MediaMetadata? = null,
@@ -23,6 +29,11 @@ class YouTubeQueue(
 
     private class EmptyRadioQueueException : IllegalStateException()
 
+    /**
+     * Loads the initial status and items for the queue, deduplicating track IDs.
+     *
+     * @return Initial queue status containing title, media items, and starting index.
+     */
     override suspend fun getInitialStatus(): Queue.Status {
         return withContext(IO) {
             var lastException: Throwable? = null
@@ -81,8 +92,18 @@ class YouTubeQueue(
         }
     }
 
+    /**
+     * Checks if more queue continuation pages are available.
+     *
+     * @return True if continuation token exists, false otherwise.
+     */
     override fun hasNextPage(): Boolean = continuation != null
 
+    /**
+     * Loads the next continuation page of queue items, deduplicating media items.
+     *
+     * @return List of deduplicated MediaItems for upcoming tracks.
+     */
     override suspend fun nextPage(): List<MediaItem> {
         return withContext(IO) {
             var lastException: Throwable? = null
@@ -110,6 +131,9 @@ class YouTubeQueue(
         /**
          * Creates a radio queue based on a song.
          * Explicitly requests the RDAMVM playlist to trigger automotive/radio mixing.
+         *
+         * @param song Target track metadata to start radio from.
+         * @return YouTubeQueue instance configured for radio playback.
          */
         fun radio(song: MediaMetadata): YouTubeQueue {
             return YouTubeQueue(

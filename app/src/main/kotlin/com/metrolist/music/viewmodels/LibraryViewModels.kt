@@ -87,6 +87,11 @@ constructor(
         .debounce(300)
         .stateIn(viewModelScope, SharingStarted.Lazily, "")
 
+    /**
+     * Updates the current song search query.
+     *
+     * @param query Search query text typed by user.
+     */
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
     }
@@ -114,14 +119,23 @@ constructor(
                 }
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    /**
+     * Synchronizes liked songs from YouTube Music account.
+     */
     fun syncLikedSongs() {
         viewModelScope.launch(Dispatchers.IO) { syncUtils.syncLikedSongs() }
     }
 
+    /**
+     * Synchronizes library songs from YouTube Music account.
+     */
     fun syncLibrarySongs() {
         viewModelScope.launch(Dispatchers.IO) { syncUtils.syncLibrarySongs() }
     }
 
+    /**
+     * Synchronizes uploaded songs from YouTube Music account.
+     */
     fun syncUploadedSongs() {
         viewModelScope.launch(Dispatchers.IO) { syncUtils.syncUploadedSongs() }
     }
@@ -264,6 +278,9 @@ constructor(
     }
 }
 
+/**
+ * ViewModel managing library playlists retrieval and search filtering.
+ */
 @HiltViewModel
 class LibraryPlaylistsViewModel
 @Inject
@@ -278,6 +295,11 @@ constructor(
         .debounce(300)
         .stateIn(viewModelScope, SharingStarted.Lazily, "")
 
+    /**
+     * Updates the playlist search query filter.
+     *
+     * @param query Search query text typed by user.
+     */
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
     }
@@ -307,6 +329,9 @@ constructor(
             }
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    /**
+     * Synchronizes saved playlists from YouTube Music account.
+     */
     fun sync() {
         viewModelScope.launch(Dispatchers.IO) { syncUtils.syncSavedPlaylists() }
     }

@@ -246,10 +246,24 @@ interface DatabaseDao {
     @Query("SELECT COUNT(1) FROM song WHERE liked")
     fun likedSongsCount(): Flow<Int>
 
+    /**
+     * Retrieves unique songs belonging to an album.
+     *
+     * @param albumId Album identifier.
+     * @return Flow emitting list of unique album songs.
+     */
     @Transaction
     @Query("SELECT DISTINCT song.* FROM song JOIN song_album_map ON song.id = song_album_map.songId WHERE song_album_map.albumId = :albumId")
     fun albumSongs(albumId: String): Flow<List<Song>>
 
+    /**
+     * Retrieves a paginated list of unique songs belonging to an album.
+     *
+     * @param albumId Album identifier.
+     * @param limit Maximum number of songs to fetch.
+     * @param offset Offset index for pagination.
+     * @return List of unique album songs.
+     */
     @Transaction
     @Query(
         "SELECT DISTINCT song.* FROM song JOIN song_album_map ON song.id = song_album_map.songId " +
@@ -281,12 +295,26 @@ interface DatabaseDao {
     )
     fun songsInBookmarkedPlaylists(): Flow<List<Song>>
 
+    /**
+     * Retrieves unique artist songs ordered by library addition date ascending.
+     *
+     * @param artistId Artist identifier.
+     * @return Flow emitting list of unique artist songs.
+     */
     @Transaction
     @Query(
         "SELECT DISTINCT song.* FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = :artistId AND inLibrary IS NOT NULL ORDER BY inLibrary",
     )
     fun artistSongsByCreateDateAsc(artistId: String): Flow<List<Song>>
 
+    /**
+     * Retrieves a paginated list of unique artist songs ordered by creation date ascending.
+     *
+     * @param artistId Artist identifier.
+     * @param limit Maximum number of songs.
+     * @param offset Offset index.
+     * @return List of unique artist songs.
+     */
     @Transaction
     @Query(
         "SELECT DISTINCT song.* FROM song_artist_map JOIN song ON song_artist_map.songId = song.id " +
@@ -295,18 +323,41 @@ interface DatabaseDao {
     )
     suspend fun artistSongsByCreateDateAsc(artistId: String, limit: Int, offset: Int): List<Song>
 
+    /**
+     * Retrieves unique artist songs ordered by title ascending.
+     *
+     * @param artistId Artist identifier.
+     * @return Flow emitting list of unique artist songs.
+     */
     @Transaction
     @Query(
         "SELECT DISTINCT song.* FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = :artistId AND inLibrary IS NOT NULL ORDER BY title",
     )
     fun artistSongsByNameAsc(artistId: String): Flow<List<Song>>
 
+    /**
+     * Retrieves unique artist songs ordered by total play time ascending.
+     *
+     * @param artistId Artist identifier.
+     * @return Flow emitting list of unique artist songs.
+     */
     @Transaction
     @Query(
         "SELECT DISTINCT song.* FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = :artistId AND inLibrary IS NOT NULL ORDER BY totalPlayTime",
     )
     fun artistSongsByPlayTimeAsc(artistId: String): Flow<List<Song>>
 
+    /**
+     * Retrieves unique artist songs sorted by specified sort type and order.
+     *
+     * @param artistId Artist identifier.
+     * @param sortType Sort criterion (Create date, Name, Play time).
+     * @param descending True for descending sort, false for ascending.
+     * @param fromTimeStamp Optional start timestamp.
+     * @param toTimeStamp Optional end timestamp.
+     * @param limit Optional limit for number of results.
+     * @return Flow emitting sorted list of unique artist songs.
+     */
     fun artistSongs(
         artistId: String,
         sortType: ArtistSongSortType,
@@ -357,6 +408,13 @@ interface DatabaseDao {
     )
     fun mostPlayedSongsByArtist(artistId: String, fromTimeStamp: LocalDateTime, toTimeStamp: LocalDateTime): Flow<List<Song>>
 
+    /**
+     * Retrieves a preview list of unique artist songs.
+     *
+     * @param artistId Artist identifier.
+     * @param previewSize Number of preview songs to return.
+     * @return Flow emitting list of unique preview songs.
+     */
     @Transaction
     @Query(
         "SELECT DISTINCT song.* FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = :artistId AND inLibrary IS NOT NULL LIMIT :previewSize",
