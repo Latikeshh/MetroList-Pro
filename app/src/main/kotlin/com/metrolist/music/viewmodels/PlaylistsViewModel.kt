@@ -33,6 +33,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
+/**
+ * ViewModel managing playlist retrieval and search filtering.
+ */
 @HiltViewModel
 class PlaylistsViewModel
 @Inject
@@ -47,6 +50,11 @@ constructor(
         .debounce(300)
         .stateIn(viewModelScope, SharingStarted.Lazily, "")
 
+    /**
+     * Updates the current playlist search query filter.
+     *
+     * @param query Search query text typed by user.
+     */
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
     }
@@ -73,7 +81,9 @@ constructor(
             }
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    // Suspend function that waits for sync to complete
+    /**
+     * Synchronizes saved playlists from online accounts.
+     */
     suspend fun sync() {
         syncUtils.syncSavedPlaylists()
     }

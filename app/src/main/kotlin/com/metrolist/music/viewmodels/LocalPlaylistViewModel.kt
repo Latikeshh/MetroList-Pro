@@ -43,6 +43,9 @@ import java.text.Collator
 import java.util.Locale
 import javax.inject.Inject
 
+/**
+ * ViewModel managing songs within a local playlist and supporting in-playlist search.
+ */
 @HiltViewModel
 class LocalPlaylistViewModel
 @Inject
@@ -66,6 +69,11 @@ constructor(
         .debounce(300)
         .stateIn(viewModelScope, SharingStarted.Lazily, "")
 
+    /**
+     * Updates the in-playlist search query to filter songs.
+     *
+     * @param query Search query text typed by user.
+     */
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
     }

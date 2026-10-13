@@ -53,6 +53,11 @@ fun List<Playlist>.filterYoutubeShorts(enabled: Boolean = false) =
 
 private val songNoiseRegex = Regex("(?i)\\(official.*?\\)|\\[official.*?]|\\(audio\\)|\\(lyric.*?\\)|official video|official audio|4k|hd")
 
+/**
+ * Computes a normalized smart metadata fingerprint key for a song to detect duplicate uploads.
+ *
+ * @return Normalized fingerprint string based on title, primary artist, and duration bucket.
+ */
 fun Song.deduplicationKey(): String {
     val cleanTitle = song.title
         .replace(songNoiseRegex, "")
@@ -62,4 +67,9 @@ fun Song.deduplicationKey(): String {
     return if (cleanTitle.isBlank()) song.id else "$cleanTitle|$primaryArtist|$durationBucket"
 }
 
+/**
+ * Extension function to deduplicate a list of songs using smart metadata fingerprinting.
+ *
+ * @return List of unique songs with duplicate uploads removed.
+ */
 fun List<Song>.deduplicateSongs(): List<Song> = distinctBy { it.deduplicationKey() }

@@ -37,6 +37,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.atomic.AtomicInteger
 
+/**
+ * Utility object responsible for exporting audio tracks to public device storage.
+ */
 object LatikeshExporter {
     private const val TAG = "LatikeshExporter"
     private const val CHANNEL_ID = "audio_export_channel"
@@ -48,6 +51,11 @@ object LatikeshExporter {
         .proxy(YouTube.proxy)
         .build()
 
+    /**
+     * Creates the notification channel for audio export status updates.
+     *
+     * @param context Application context.
+     */
     private fun createNotificationChannel(context: Context) {
         val name = "Audio Export"
         val descriptionText = "Notifications for exported music files"
@@ -59,6 +67,13 @@ object LatikeshExporter {
         notificationManager?.createNotificationChannel(channel)
     }
 
+    /**
+     * Safely posts a system notification catching any potential permission exception.
+     *
+     * @param manager Notification manager instance.
+     * @param id Unique notification ID.
+     * @param notification Notification object to post.
+     */
     private fun safeNotify(manager: NotificationManagerCompat, id: Int, notification: Notification) {
         try {
             manager.notify(id, notification)
@@ -69,6 +84,13 @@ object LatikeshExporter {
         }
     }
 
+    /**
+     * Checks if an audio file with the specified filename already exists in public storage (`Music/Metrolist`).
+     *
+     * @param context Application context.
+     * @param fileName Target filename to check.
+     * @return True if file exists and has size greater than 0, false otherwise.
+     */
     private fun isAudioFileAlreadyExported(context: Context, fileName: String): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val projection = arrayOf(MediaStore.MediaColumns._ID)
@@ -89,6 +111,12 @@ object LatikeshExporter {
         }
     }
 
+    /**
+     * Exports a song to public device storage (`Music/Metrolist`) asynchronously with live progress notifications.
+     *
+     * @param context Application or UI context.
+     * @param mediaMetadata Track metadata to export.
+     */
     fun exportToPublicStorage(
         context: Context,
         mediaMetadata: MediaMetadata,
