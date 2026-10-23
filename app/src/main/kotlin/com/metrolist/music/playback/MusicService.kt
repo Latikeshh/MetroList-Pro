@@ -385,14 +385,18 @@ class MusicService :
             player.seekTo(start)
         }
 
+        val mainHandler = Handler(Looper.getMainLooper())
+
         abLoopMessage = player.createMessage { _, _ ->
-            if (isAbLoopEnabled.value && player.currentMediaItem?.mediaId == targetMediaId) {
-                val loopStart = abLoopPointA.value ?: start
-                val loopEnd = abLoopPointB.value ?: end
-                if (player.currentPosition >= loopEnd - 50) {
-                    player.seekTo(loopStart)
+            mainHandler.post {
+                if (isAbLoopEnabled.value && ::player.isInitialized && player.currentMediaItem?.mediaId == targetMediaId) {
+                    val loopStart = abLoopPointA.value ?: start
+                    val loopEnd = abLoopPointB.value ?: end
+                    if (player.currentPosition >= loopEnd - 100) {
+                        player.seekTo(loopStart)
+                    }
+                    updateAbLoop()
                 }
-                updateAbLoop()
             }
         }
         .setPosition(end)
@@ -4898,6 +4902,7 @@ class MusicService :
     ) {
         if (reason == Player.DISCONTINUITY_REASON_SEEK) {
             scheduleCrossfade()
+            updateAbLoop()
         }
     }
 

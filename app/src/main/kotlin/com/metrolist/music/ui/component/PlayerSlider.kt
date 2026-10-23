@@ -34,6 +34,7 @@ fun PlayerSliderTrack(
     colors: SliderColors = SliderDefaults.colors(),
     trackHeight: Dp = 10.dp,
     abLoopRange: ClosedFloatingPointRange<Float>? = null,
+    isAbLoopEnabled: Boolean = true,
 ) {
     val inactiveTrackColor = colors.inactiveTrackColor
     val activeTrackColor = colors.activeTrackColor
@@ -59,6 +60,7 @@ fun PlayerSliderTrack(
             activeTickColor,
             trackHeight,
             abLoopRange,
+            isAbLoopEnabled,
         )
     }
 }
@@ -73,6 +75,7 @@ private fun DrawScope.drawTrack(
     activeTickColor: Color,
     trackHeight: Dp = 2.dp,
     abLoopRange: ClosedFloatingPointRange<Float>? = null,
+    isAbLoopEnabled: Boolean = true,
 ) {
     val isRtl = layoutDirection == LayoutDirection.Rtl
     val sliderLeft = Offset(0f, center.y)
@@ -81,6 +84,8 @@ private fun DrawScope.drawTrack(
     val sliderEnd = if (isRtl) sliderLeft else sliderRight
     val tickSize = 2.0.dp.toPx()
     val trackStrokeWidth = trackHeight.toPx()
+
+    // 1. Draw Inactive Background Track
     drawLine(
         inactiveTrackColor,
         sliderStart,
@@ -88,14 +93,14 @@ private fun DrawScope.drawTrack(
         trackStrokeWidth,
         StrokeCap.Round
     )
+
+    // 2. Draw Active Playhead Progress Line
     val sliderValueEnd = Offset(
-        sliderStart.x +
-                (sliderEnd.x - sliderStart.x) * activeRangeEnd,
+        sliderStart.x + (sliderEnd.x - sliderStart.x) * activeRangeEnd,
         center.y
     )
     val sliderValueStart = Offset(
-        sliderStart.x +
-                (sliderEnd.x - sliderStart.x) * activeRangeStart,
+        sliderStart.x + (sliderEnd.x - sliderStart.x) * activeRangeStart,
         center.y
     )
     drawLine(
@@ -106,28 +111,31 @@ private fun DrawScope.drawTrack(
         StrokeCap.Round
     )
 
-    // Draw A-B Loop Range Markers if active
+    // 3. Draw A-B Loop Range Region directly on the Progress Bar if set
     if (abLoopRange != null) {
         val loopStartPx = sliderStart.x + (sliderEnd.x - sliderStart.x) * abLoopRange.start.coerceIn(0f, 1f)
         val loopEndPx = sliderStart.x + (sliderEnd.x - sliderStart.x) * abLoopRange.endInclusive.coerceIn(0f, 1f)
 
-        // Draw loop band
+        val accentColor = if (isAbLoopEnabled) Color(0xFFFFC107) else Color.Gray
+        val alpha = if (isAbLoopEnabled) 0.85f else 0.4f
+
+        // Draw highlighted interval segment
         drawLine(
-            Color.Yellow.copy(alpha = 0.8f),
+            accentColor.copy(alpha = alpha),
             Offset(loopStartPx, center.y),
             Offset(loopEndPx, center.y),
-            trackStrokeWidth * 0.8f,
+            trackStrokeWidth * 0.85f,
             StrokeCap.Square
         )
 
-        // Draw Marker Pins A and B
+        // Draw Boundary Pins for Point A and Point B
         drawCircle(
-            color = Color.Yellow,
+            color = accentColor,
             center = Offset(loopStartPx, center.y),
             radius = (trackStrokeWidth / 2f) + 2.dp.toPx()
         )
         drawCircle(
-            color = Color.Yellow,
+            color = accentColor,
             center = Offset(loopEndPx, center.y),
             radius = (trackStrokeWidth / 2f) + 2.dp.toPx()
         )
