@@ -42,16 +42,16 @@ jobs:
             variantName: Gms
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@v4
         with:
           java-version: "21"
           distribution: "temurin"
 
       - name: Set Up Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v4
         with:
           cache-encryption-key: ${{ secrets.GRADLE_CACHE_KEY }}
           cache-cleanup: on-success
@@ -92,7 +92,7 @@ jobs:
           find "$OUTPUT_DIR" -name "*-signed.apk" -o -name "*-unsigned-signed.apk" | xargs -I{} mv {} "$OUTPUT_DIR/out/$TARGET_NAME"
 
       - name: Upload Signed APK
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.variant == 'gms' && 'app-with-Google-Cast' || 'app-release' }}
           path: app/build/outputs/apk/${{ matrix.variant }}/release/out/*
@@ -115,16 +115,16 @@ jobs:
             variantName: Gms
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@v4
         with:
           java-version: "21"
           distribution: "temurin"
 
       - name: Set Up Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v4
         with:
           cache-encryption-key: ${{ secrets.GRADLE_CACHE_KEY }}
           cache-cleanup: on-success
@@ -132,9 +132,25 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Restore Persistent Keystore
+      - name: Restore or Generate Debug Keystore
         run: |
-          echo "${{ secrets.DEBUG_KEYSTORE }}" | base64 -d > ./app/persistent-debug.keystore
+          if [ -n "${{ secrets.DEBUG_KEYSTORE }}" ]; then
+            echo "Restoring debug keystore from secrets..."
+            echo "${{ secrets.DEBUG_KEYSTORE }}" | base64 -d > ./app/persistent-debug.keystore || true
+          fi
+
+          if [ ! -s ./app/persistent-debug.keystore ]; then
+            echo "secrets.DEBUG_KEYSTORE is missing or invalid; generating fallback debug keystore..."
+            keytool -genkeypair -v \
+              -keystore ./app/persistent-debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Metrolist Debug,O=Metrolist,C=US"
+          fi
 
       # Lint is intentionally not run in CI: it never gated a merge and added
       # several minutes to every build. Run :app:lintGmsRelease locally.
@@ -150,7 +166,7 @@ jobs:
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
 
       - name: Upload Debug APK
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.variant == 'gms' && 'app-debug-gms' || 'app-debug' }}
           path: app/build/outputs/apk/${{ matrix.variant }}/debug/*.apk
@@ -164,7 +180,7 @@ jobs:
 
     steps:
       - name: Download Signed APK
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: app-with-Google-Cast
           path: nightly
