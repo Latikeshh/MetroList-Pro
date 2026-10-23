@@ -90,7 +90,11 @@ import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.playback.ExoDownloadService
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.db.entities.SpeedDialItem
+import com.metrolist.music.ui.component.ABLoopBottomSheet
+import com.metrolist.music.ui.component.BottomSheetPage
+import com.metrolist.music.ui.component.BottomSheetPageState
 import com.metrolist.music.ui.component.BottomSheetState
+import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.ListDialog
 import com.metrolist.music.ui.component.Material3MenuGroup
 import com.metrolist.music.ui.component.Material3MenuItemData
@@ -186,6 +190,27 @@ fun PlayerMenu(
         mediaMetadata = mediaMetadata,
         onDismiss = { showListenTogetherDialog = false },
     )
+
+    var showAbLoopDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    val abLoopSheetState = remember(showAbLoopDialog) {
+        BottomSheetPageState(
+            isVisible = showAbLoopDialog,
+            content = {
+                ABLoopBottomSheet(
+                    onDismiss = { showAbLoopDialog = false },
+                )
+            },
+        )
+    }
+
+    if (showAbLoopDialog) {
+        BottomSheetPage(
+            state = abLoopSheetState,
+        )
+    }
 
     var showSelectArtistDialog by rememberSaveable {
         mutableStateOf(false)
@@ -584,6 +609,19 @@ fun PlayerMenu(
                                 )
                             }
                         },
+                        Material3MenuItemData(
+                            title = { Text(text = stringResource(R.string.ab_looper)) },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.repeat_one),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            },
+                            onClick = {
+                                showAbLoopDialog = true
+                            },
+                        ),
                     ),
             )
         }

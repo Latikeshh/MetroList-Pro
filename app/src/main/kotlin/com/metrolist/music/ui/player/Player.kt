@@ -1479,9 +1479,18 @@ fun BottomSheetPlayer(
                         enabled = !isListenTogetherGuest,
                         thumb = { Spacer(modifier = Modifier.size(0.dp)) },
                         track = { sliderState ->
+                            val abPointA by playerConnection.abLoopPointA.collectAsStateWithLifecycle()
+                            val abPointB by playerConnection.abLoopPointB.collectAsStateWithLifecycle()
+                            val abEnabled by playerConnection.isAbLoopEnabled.collectAsStateWithLifecycle()
+
+                            val abLoopRange = if (abEnabled && abPointA != null && abPointB != null && duration > 0) {
+                                (abPointA!!.toFloat() / duration.toFloat())..(abPointB!!.toFloat() / duration.toFloat())
+                            } else null
+
                             PlayerSliderTrack(
                                 sliderState = sliderState,
                                 colors = PlayerSliderColors.getSliderColors(textButtonColor, playerBackground, useDarkTheme),
+                                abLoopRange = abLoopRange,
                             )
                         },
                         modifier = Modifier.padding(horizontal = PlayerHorizontalPadding),

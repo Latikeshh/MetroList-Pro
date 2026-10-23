@@ -185,6 +185,16 @@ class PlayerConnection(
     val shuffleModeEnabled = MutableStateFlow(false)
     val repeatMode = MutableStateFlow(REPEAT_MODE_OFF)
 
+    val abLoopPointA = service.abLoopPointA
+    val abLoopPointB = service.abLoopPointB
+    val isAbLoopEnabled = service.isAbLoopEnabled
+
+    fun setAbLoopPointA(pointA: Long?) = service.setAbLoopPointA(pointA)
+    fun setAbLoopPointB(pointB: Long?) = service.setAbLoopPointB(pointB)
+    fun setAbLoopEnabled(enabled: Boolean) = service.setAbLoopEnabled(enabled)
+    fun toggleAbLoop() = service.setAbLoopEnabled(!isAbLoopEnabled.value)
+    fun clearAbLoop() = service.clearAbLoop()
+
     val canSkipPrevious = MutableStateFlow(true)
     val canSkipNext = MutableStateFlow(true)
 

@@ -890,6 +890,16 @@
     <string name="exported_to_storage">Saved to Music/Metrolist</string>
     <string name="already_exported_to_storage">File already exists in Music/Metrolist</string>
     <string name="export_audio_failed">Failed to export audio file</string>
+
+    <!-- A-B Section Looper -->
+    <string name="ab_looper">A-B Section Looper</string>
+    <string name="set_point_a">Set Point A</string>
+    <string name="set_point_b">Set Point B</string>
+    <string name="point_a">Start Point A</string>
+    <string name="point_b">End Point B</string>
+    <string name="clear_ab_loop">Clear A-B Loop</string>
+    <string name="ab_loop_active">Active</string>
+    <string name="ab_loop_off">Disabled</string>
     <string name="auto_playlist">Auto playlist</string>
     <string name="downloaded_episodes">Downloaded episodes</string>
     <string name="no_subscribed_channels">No subscribed channels</string>

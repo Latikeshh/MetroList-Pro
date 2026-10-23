@@ -308,6 +308,98 @@ class MusicService :
     private var crossfadeGapless = true
     private var crossfadeMessage: PlayerMessage? = null
 
+    val abLoopPointA = MutableStateFlow<Long?>(null)
+    val abLoopPointB = MutableStateFlow<Long?>(null)
+    val isAbLoopEnabled = MutableStateFlow(false)
+    private var abLoopMessage: PlayerMessage? = null
+
+    fun setAbLoopPointA(pointA: Long?) {
+        if (pointA == null) {
+            abLoopPointA.value = null
+            updateAbLoop()
+            return
+        }
+        val currentDuration = if (::player.isInitialized && player.duration > 0) player.duration else Long.MAX_VALUE
+        val validA = pointA.coerceIn(0L, currentDuration)
+        val currentB = abLoopPointB.value
+
+        if (currentB != null && validA >= currentB) {
+            val adjustedB = (validA + 1000L).coerceAtMost(currentDuration)
+            abLoopPointB.value = adjustedB
+        }
+        abLoopPointA.value = validA
+        updateAbLoop()
+    }
+
+    fun setAbLoopPointB(pointB: Long?) {
+        if (pointB == null) {
+            abLoopPointB.value = null
+            updateAbLoop()
+            return
+        }
+        val currentDuration = if (::player.isInitialized && player.duration > 0) player.duration else Long.MAX_VALUE
+        val validB = pointB.coerceIn(0L, currentDuration)
+        val currentA = abLoopPointA.value
+
+        if (currentA != null && validB <= currentA) {
+            val adjustedA = (validB - 1000L).coerceAtLeast(0L)
+            abLoopPointA.value = adjustedA
+        }
+        abLoopPointB.value = validB
+        updateAbLoop()
+    }
+
+    fun setAbLoopEnabled(enabled: Boolean) {
+        isAbLoopEnabled.value = enabled
+        if (enabled && (abLoopPointA.value == null || abLoopPointB.value == null)) {
+            if (::player.isInitialized) {
+                val pos = player.currentPosition
+                val dur = if (player.duration > 0) player.duration else pos + 30000L
+                if (abLoopPointA.value == null) abLoopPointA.value = pos
+                if (abLoopPointB.value == null) abLoopPointB.value = (pos + 30000L).coerceAtMost(dur)
+            }
+        }
+        updateAbLoop()
+    }
+
+    fun clearAbLoop() {
+        abLoopPointA.value = null
+        abLoopPointB.value = null
+        isAbLoopEnabled.value = false
+        abLoopMessage?.cancel()
+        abLoopMessage = null
+    }
+
+    fun updateAbLoop() {
+        abLoopMessage?.cancel()
+        abLoopMessage = null
+
+        val start = abLoopPointA.value
+        val end = abLoopPointB.value
+        if (!isAbLoopEnabled.value || start == null || end == null || start >= end) return
+        if (!::player.isInitialized) return
+
+        val targetMediaId = player.currentMediaItem?.mediaId ?: return
+
+        if (player.currentPosition >= end) {
+            player.seekTo(start)
+        }
+
+        abLoopMessage = player.createMessage { _, _ ->
+            if (isAbLoopEnabled.value && player.currentMediaItem?.mediaId == targetMediaId) {
+                val loopStart = abLoopPointA.value ?: start
+                val loopEnd = abLoopPointB.value ?: end
+                if (player.currentPosition >= loopEnd - 50) {
+                    player.seekTo(loopStart)
+                }
+                updateAbLoop()
+            }
+        }
+        .setPosition(end)
+        .setDeleteAfterDelivery(true)
+        .send()
+    }
+
     private val secondaryPlayerListener =
         object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
@@ -2515,6 +2607,7 @@ class MusicService :
             }
         }
         lastTransitionedMediaId = mediaItem?.mediaId
+        clearAbLoop()
         initialBufferRecoveryJob?.cancel()
         initialBufferRecoveryJob = null
         initialBufferRecoveryAttemptedMediaId = null

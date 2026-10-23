@@ -23,13 +23,17 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 
+/**
+ * Custom player slider track component rendering timeline progress and optional A-B loop range markers.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerSliderTrack(
     sliderState: SliderState,
     modifier: Modifier = Modifier,
     colors: SliderColors = SliderDefaults.colors(),
-    trackHeight: Dp = 10.dp
+    trackHeight: Dp = 10.dp,
+    abLoopRange: ClosedFloatingPointRange<Float>? = null,
 ) {
     val inactiveTrackColor = colors.inactiveTrackColor
     val activeTrackColor = colors.activeTrackColor
@@ -53,7 +57,8 @@ fun PlayerSliderTrack(
             activeTrackColor,
             inactiveTickColor,
             activeTickColor,
-            trackHeight
+            trackHeight,
+            abLoopRange,
         )
     }
 }
@@ -66,7 +71,8 @@ private fun DrawScope.drawTrack(
     activeTrackColor: Color,
     inactiveTickColor: Color,
     activeTickColor: Color,
-    trackHeight: Dp = 2.dp
+    trackHeight: Dp = 2.dp,
+    abLoopRange: ClosedFloatingPointRange<Float>? = null,
 ) {
     val isRtl = layoutDirection == LayoutDirection.Rtl
     val sliderLeft = Offset(0f, center.y)
@@ -99,6 +105,34 @@ private fun DrawScope.drawTrack(
         trackStrokeWidth,
         StrokeCap.Round
     )
+
+    // Draw A-B Loop Range Markers if active
+    if (abLoopRange != null) {
+        val loopStartPx = sliderStart.x + (sliderEnd.x - sliderStart.x) * abLoopRange.start.coerceIn(0f, 1f)
+        val loopEndPx = sliderStart.x + (sliderEnd.x - sliderStart.x) * abLoopRange.endInclusive.coerceIn(0f, 1f)
+
+        // Draw loop band
+        drawLine(
+            Color.Yellow.copy(alpha = 0.8f),
+            Offset(loopStartPx, center.y),
+            Offset(loopEndPx, center.y),
+            trackStrokeWidth * 0.8f,
+            StrokeCap.Square
+        )
+
+        // Draw Marker Pins A and B
+        drawCircle(
+            color = Color.Yellow,
+            center = Offset(loopStartPx, center.y),
+            radius = (trackStrokeWidth / 2f) + 2.dp.toPx()
+        )
+        drawCircle(
+            color = Color.Yellow,
+            center = Offset(loopEndPx, center.y),
+            radius = (trackStrokeWidth / 2f) + 2.dp.toPx()
+        )
+    }
+
     for (tick in tickFractions) {
         val outsideFraction = tick > activeRangeEnd || tick < activeRangeStart
         drawCircle(
