@@ -23,7 +23,7 @@ jobs:
     steps:
       # Only HEAD and HEAD^ are read below, and no submodule or Gradle work
       # happens in this job.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
@@ -99,16 +99,16 @@ jobs:
             variantName: Izzy
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@v4
         with:
           java-version: "21"
           distribution: "temurin"
 
       - name: Set Up Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v4
         with:
           # Read-only: release builds reuse the dependency and build caches
           # written by main without publishing entries of their own.
@@ -173,7 +173,7 @@ jobs:
           ls -la "$OUTPUT_DIR/out/"
 
       - name: Upload Signed APKs
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.variant == 'gms' && 'Metrolist-with-Google-Cast' || matrix.variant == 'izzy' && 'Metrolist-izzy' || 'Metrolist' }}
           path: app/build/outputs/apk/${{ matrix.variant }}/release/out/*.apk
@@ -186,12 +186,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Download all APKs
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           path: downloaded_artifacts/
 
