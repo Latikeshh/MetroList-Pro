@@ -138,7 +138,7 @@ jobs:
           keyAlias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
-          buildToolsVersion: 36.0.0
+          buildToolsVersion: 35.0.0
 
       - name: Move and rename signed APKs
         run: |
