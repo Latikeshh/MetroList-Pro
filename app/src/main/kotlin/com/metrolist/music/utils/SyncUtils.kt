@@ -1459,79 +1459,85 @@ class SyncUtils @Inject constructor(
             return@withContext
         }
 
+        val tab0Playlists = runCatching {
+            withRetry {
+                YouTube.library("FEmusic_liked_playlists", tabIndex = 0).completed()
+            }.getOrNull()?.getOrNull()?.items?.filterIsInstance<PlaylistItem>().orEmpty()
+        }.getOrDefault(emptyList())
 
-        withRetry {
-            YouTube.library("FEmusic_liked_playlists").completed()
-        }.onSuccess { result ->
-            result.onSuccess { page ->
+        val tab1Playlists = runCatching {
+            YouTube.library("FEmusic_liked_playlists", tabIndex = 1).completed()
+                .getOrNull()?.items?.filterIsInstance<PlaylistItem>().orEmpty()
+        }.getOrDefault(emptyList())
+
+        val remotePlaylists = (tab0Playlists + tab1Playlists)
+            .filterNot { it.id == "LM" || it.id == "SE" }
+            .reversed()
+            .distinctBy { it.id }
+
+        if (remotePlaylists.isEmpty()) {
+            Timber.w("syncSavedPlaylists: No online playlists returned")
+            return@withContext
+        }
+
+        try {
+            val remoteIds = remotePlaylists.map { it.id }.toSet()
+
+            executeCleanupDuplicatePlaylists()
+
+            val localPlaylists = database.playlistEntitiesByNameAsc().toMutableList()
+            localPlaylists.filterNot { it.browseId in remoteIds }
+                .filterNot { it.browseId == null }
+                .forEach { playlist ->
+                    try {
+                        database.update(playlist.localToggleLike())
+                        delay(DB_OPERATION_DELAY_MS)
+                    } catch (e: Exception) {
+                        Timber.e(e, "Failed to update playlist: ${playlist.id}")
+                    }
+                }
+
+            for (playlist in remotePlaylists) {
                 try {
-                    val remotePlaylists = page.items.filterIsInstance<PlaylistItem>()
-                        .filterNot { it.id == "LM" || it.id == "SE" }
-                        .reversed()
-                        .distinctBy { it.id }
-                    val remoteIds = remotePlaylists.map { it.id }.toSet()
+                    var playlistEntity = localPlaylists.find { it.browseId == playlist.id }
 
-                    executeCleanupDuplicatePlaylists()
-
-                    val localPlaylists = database.playlistEntitiesByNameAsc().toMutableList()
-                    localPlaylists.filterNot { it.browseId in remoteIds }
-                        .filterNot { it.browseId == null }
-                        .forEach { playlist ->
-                            try {
-                                database.update(playlist.localToggleLike())
-                                delay(DB_OPERATION_DELAY_MS)
-                            } catch (e: Exception) {
-                                Timber.e(e, "Failed to update playlist: ${playlist.id}")
-                            }
-                        }
-
-                    for (playlist in remotePlaylists) {
-                        try {
-                            var playlistEntity = localPlaylists.find { it.browseId == playlist.id }
-
-                            if (playlistEntity == null) {
-                                playlistEntity = PlaylistEntity(
-                                    name = playlist.title,
-                                    browseId = playlist.id,
-                                    thumbnailUrl = playlist.thumbnail,
-                                    isEditable = playlist.isEditable,
-                                    bookmarkedAt = LocalDateTime.now(),
-                                    remoteSongCount = playlist.songCountText?.let {
-                                        Regex("""\d+""").find(it)?.value?.toIntOrNull()
-                                    },
-                                    playEndpointParams = playlist.playEndpoint?.params,
-                                    shuffleEndpointParams = playlist.shuffleEndpoint?.params,
-                                    radioEndpointParams = playlist.radioEndpoint?.params
-                                )
-                                database.insert(playlistEntity)
-                                localPlaylists.add(playlistEntity)
-                                Timber.d("syncSavedPlaylists: Created new playlist ${playlist.title} (${playlist.id})")
-                            } else {
-                                database.update(playlistEntity, playlist)
-                                Timber.d("syncSavedPlaylists: Updated existing playlist ${playlist.title} (${playlist.id})")
-                            }
-
-                            if (!isPlaylistBeingModified(playlistEntity.id)) {
-                                executeSyncPlaylist(playlist.id, playlistEntity.id)
-                                delay(DB_OPERATION_DELAY_MS)
-                            } else {
-                                Timber.d("Skipping playlist ${playlist.title} — remove in progress")
-                            }
-                            delay(DB_OPERATION_DELAY_MS)
-                        } catch (e: Exception) {
-                            Timber.e(e, "Failed to sync playlist ${playlist.title}")
-                        }
+                    if (playlistEntity == null) {
+                        playlistEntity = PlaylistEntity(
+                            name = playlist.title,
+                            browseId = playlist.id,
+                            thumbnailUrl = playlist.thumbnail,
+                            isEditable = playlist.isEditable,
+                            bookmarkedAt = LocalDateTime.now(),
+                            remoteSongCount = playlist.songCountText?.let {
+                                Regex("""\d+""").find(it)?.value?.toIntOrNull()
+                            },
+                            playEndpointParams = playlist.playEndpoint?.params,
+                            shuffleEndpointParams = playlist.shuffleEndpoint?.params,
+                            radioEndpointParams = playlist.radioEndpoint?.params
+                        )
+                        database.insert(playlistEntity)
+                        localPlaylists.add(playlistEntity)
+                        Timber.d("syncSavedPlaylists: Created new playlist ${playlist.title} (${playlist.id})")
+                    } else {
+                        database.update(playlistEntity, playlist)
+                        Timber.d("syncSavedPlaylists: Updated existing playlist ${playlist.title} (${playlist.id})")
                     }
 
-                    Timber.d("Synced ${remotePlaylists.size} saved playlists")
+                    if (!isPlaylistBeingModified(playlistEntity.id)) {
+                        executeSyncPlaylist(playlist.id, playlistEntity.id)
+                        delay(DB_OPERATION_DELAY_MS)
+                    } else {
+                        Timber.d("Skipping playlist ${playlist.title} — remove in progress")
+                    }
+                    delay(DB_OPERATION_DELAY_MS)
                 } catch (e: Exception) {
-                    Timber.e(e, "Error processing saved playlists")
+                    Timber.e(e, "Failed to sync playlist ${playlist.title}")
                 }
-            }.onFailure { e ->
-                Timber.e(e, "syncSavedPlaylists: Failed to fetch playlists from YouTube")
             }
-        }.onFailure { e ->
-            Timber.e(e, "Failed to sync saved playlists after retries")
+
+            Timber.d("Synced ${remotePlaylists.size} saved playlists")
+        } catch (e: Exception) {
+            Timber.e(e, "Error processing saved playlists")
         }
     }
 
