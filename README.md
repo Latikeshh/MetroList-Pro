@@ -340,5 +340,4 @@ All trademarks, service marks, and intellectual property rights referenced in th
 
 **Made with ❤️ by [Mo Agamy](https://github.com/mostafaalagamy)**
 
-
 </div>
