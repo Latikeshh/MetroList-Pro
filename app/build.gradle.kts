@@ -89,6 +89,8 @@ android {
         }
     }
 
+    val releaseKeystoreFile = file("release.keystore")
+
     signingConfigs {
         create("persistentDebug") {
             storeFile = persistentDebugKeystoreFile
@@ -103,10 +105,12 @@ android {
             keyPassword = debugKeyPassword
         }
         create("release") {
-            storeFile = file("release.keystore")
-            storePassword = System.getenv("STORE_PASSWORD") ?: "metrolist123"
-            keyAlias = System.getenv("KEY_ALIAS") ?: "metrolist"
-            keyPassword = System.getenv("KEY_PASSWORD") ?: "metrolist123"
+            if (releaseKeystoreFile.exists()) {
+                storeFile = releaseKeystoreFile
+                storePassword = System.getenv("STORE_PASSWORD") ?: "metrolist123"
+                keyAlias = System.getenv("KEY_ALIAS") ?: "metrolist"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: "metrolist123"
+            }
         }
         getByName("debug") {
             keyAlias = "androiddebugkey"
@@ -118,7 +122,9 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            if (releaseKeystoreFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             isCrunchPngs = false
