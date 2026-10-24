@@ -130,17 +130,7 @@ jobs:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
 
-      - name: Sign APK
-        uses: ilharp/sign-android-release@v2.0.0
-        with:
-          releaseDir: app/build/outputs/apk/${{ matrix.variant }}/release/
-          signingKeyBase64: ${{ secrets.KEYSTORE }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-          buildToolsVersion: 35.0.0
-
-      - name: Move and rename signed APKs
+      - name: Sign & Prepare Release APKs
         run: |
           OUTPUT_DIR="app/build/outputs/apk/${{ matrix.variant }}/release"
           mkdir -p "$OUTPUT_DIR/out"
@@ -153,22 +143,32 @@ jobs:
             TARGET_NAME="Metrolist.apk"
           fi
 
-          SIGNED_APK=$(find "$OUTPUT_DIR" -name "*-signed.apk" -o -name "*-unsigned-signed.apk" | head -n 1)
-
-          if [ -n "$SIGNED_APK" ]; then
-            mv "$SIGNED_APK" "$OUTPUT_DIR/out/$TARGET_NAME"
-          else
-            UNSIGNED_APK=$(find "$OUTPUT_DIR" -name "*.apk" | head -n 1)
-            if [ -n "$UNSIGNED_APK" ]; then
-              mv "$UNSIGNED_APK" "$OUTPUT_DIR/out/$TARGET_NAME"
-            else
-              echo "No APK found for ${{ matrix.variant }}"
-              ls -la "$OUTPUT_DIR"
-              exit 1
-            fi
+          BUILD_APK=$(find "$OUTPUT_DIR" -maxdepth 1 -name "*.apk" | head -n 1)
+          if [ -z "$BUILD_APK" ]; then
+            echo "No built APK found for ${{ matrix.variant }}"
+            ls -la "$OUTPUT_DIR"
+            exit 1
           fi
 
-          echo "APK renamed to: $TARGET_NAME"
+          if [ -n "${{ secrets.KEYSTORE }}" ]; then
+            echo "Signing release APK with native apksigner..."
+            echo "${{ secrets.KEYSTORE }}" | base64 -d > temp_release.keystore
+
+            $ANDROID_HOME/build-tools/35.0.0/apksigner sign \
+              --ks temp_release.keystore \
+              --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
+              --ks-pass "pass:${{ secrets.KEYSTORE_PASSWORD }}" \
+              --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
+              --out "$OUTPUT_DIR/out/$TARGET_NAME" \
+              "$BUILD_APK"
+
+            rm -f temp_release.keystore
+            echo "APK signed successfully: $TARGET_NAME"
+          else
+            echo "KEYSTORE secret not set, copying unsigned APK..."
+            cp "$BUILD_APK" "$OUTPUT_DIR/out/$TARGET_NAME"
+          fi
+
           ls -la "$OUTPUT_DIR/out/"
 
       - name: Upload Signed APKs
