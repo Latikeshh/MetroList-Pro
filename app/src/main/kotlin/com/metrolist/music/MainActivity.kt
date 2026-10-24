@@ -184,6 +184,7 @@ import com.metrolist.music.ui.component.AppNavigationBar
 import com.metrolist.music.ui.component.AppNavigationRail
 import com.metrolist.music.ui.component.BottomSheetMenu
 import com.metrolist.music.ui.component.BottomSheetPage
+import com.metrolist.music.ui.component.LatikeshUpdateDialog
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.component.rememberBottomSheetState
@@ -228,7 +229,7 @@ import timber.log.Timber
 import java.util.Locale
 import javax.inject.Inject
 
-private data class AvailableUpdate(
+data class AvailableUpdate(
     val release: ReleaseInfo,
     val downloadUrl: String,
     val isKmp: Boolean,
@@ -332,10 +333,12 @@ class MainActivity : FragmentActivity() {
                 } else {
                     startService(serviceIntent)
                 }
-            } catch (e: ForegroundServiceStartNotAllowedException) {
-                Timber.w(e, "Cannot start foreground service from background")
-            } catch (e: IllegalStateException) {
-                Timber.w(e, "Failed to start foreground service")
+            } catch (e: Exception) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && e is ForegroundServiceStartNotAllowedException) {
+                    Timber.w(e, "Cannot start foreground service from background")
+                } else {
+                    Timber.w(e, "Failed to start foreground service")
+                }
             }
         }
 
@@ -1457,66 +1460,9 @@ class MainActivity : FragmentActivity() {
                                     }
                                 }
                             }
-                            AlertDialog(
-                                onDismissRequest = dismissUpdate,
-                                title = { Text(stringResource(R.string.update_available_title)) },
-                                text = {
-                                    Column(
-                                        modifier =
-                                            Modifier
-                                                .heightIn(max = 480.dp)
-                                                .verticalScroll(rememberScrollState()),
-                                    ) {
-                                        Text(
-                                            text =
-                                                stringResource(
-                                                    if (update.isKmp) {
-                                                        R.string.kmp_upgrade_title
-                                                    } else {
-                                                        R.string.update_available_message
-                                                    },
-                                                    update.release.versionName,
-                                                ),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                        )
-                                        if (update.isKmp) {
-                                            Text(
-                                                text = stringResource(R.string.kmp_upgrade_warning),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.padding(top = 12.dp),
-                                            )
-                                        }
-                                        Text(
-                                            text = stringResource(R.string.changelog),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
-                                        )
-                                        Text(
-                                            text = update.release.description.ifBlank { stringResource(R.string.changelog_empty) },
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
-                                    }
-                                },
-                                confirmButton = {
-                                    TextButton(
-                                        onClick = {
-                                            dismissUpdate()
-                                            startActivity(Intent(Intent.ACTION_VIEW, update.downloadUrl.toUri()))
-                                        },
-                                    ) {
-                                        Text(
-                                            stringResource(
-                                                if (update.isKmp) R.string.kmp_upgrade_action else R.string.update_action,
-                                            ),
-                                        )
-                                    }
-                                },
-                                dismissButton = {
-                                    TextButton(onClick = dismissUpdate) {
-                                        Text(stringResource(R.string.kmp_upgrade_later))
-                                    }
-                                },
+                            LatikeshUpdateDialog(
+                                update = update,
+                                onDismiss = dismissUpdate,
                             )
                         }
                     }

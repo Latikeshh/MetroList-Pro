@@ -383,6 +383,8 @@
     <string name="kmp_upgrade_warning">Metrolist KMP is still in development. You may encounter bugs or incomplete features.</string>
     <string name="kmp_upgrade_action">Try KMP</string>
     <string name="kmp_upgrade_later">Not now</string>
+    <string name="visit_repo">Visit Repo</string>
+    <string name="download_update">Download</string>
 
     <!-- Offload -->
     <string name="audio_offload">Enable audio offload</string>
@@ -476,7 +478,7 @@
     <string name="wrapped_ready_title">YOUR WRAPPED IS READY!</string>
     <string name="wrapped_ready_subtitle">Time to see what you loved all this year…</string>
     <string name="wrapped_thank_you">Thank you for listening!</string>
-    <string name="wrapped_special_thanks">Special thanks to MO Agamy for creating Metrolist</string>
+    <string name="wrapped_special_thanks">Special thanks to Latikesh Marathe for creating Metrolist Pro</string>
     <string name="wrapped_close">Close Wrapped</string>
     <string name="wrapped_playlist_title">Your %s Wrapped</string>
     <string name="wrapped_create_playlist">Create playlist</string>

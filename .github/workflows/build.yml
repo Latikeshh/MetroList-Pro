@@ -62,8 +62,8 @@ jobs:
       - name: Build Release APK
         run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release --warning-mode summary
         env:
-          METROLIST_APPLICATION_ID: com.metrolist.music
-          METROLIST_APP_NAME: Metrolist Pro Nightly
+          METROLIST_APPLICATION_ID: com.metrolist.pro
+          METROLIST_APP_NAME: Metrolist Pro
           METROLIST_BUILD_COMMIT: ${{ github.sha }}
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
@@ -75,9 +75,9 @@ jobs:
           OUTPUT_DIR="app/build/outputs/apk/${{ matrix.variant }}/release"
           mkdir -p "$OUTPUT_DIR/out"
           if [ "${{ matrix.variant }}" = "gms" ]; then
-            TARGET_NAME="app-universal-with-Google-Cast.apk"
+            TARGET_NAME="Metrolist-Pro-with-Google-Cast.apk"
           else
-            TARGET_NAME="app-universal-release.apk"
+            TARGET_NAME="Metrolist-Pro.apk"
           fi
 
           BUILD_APK=$(find "$OUTPUT_DIR" -maxdepth 1 -name "*.apk" | head -n 1)
@@ -92,7 +92,7 @@ jobs:
       - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.variant == 'gms' && 'app-with-Google-Cast' || 'app-release' }}
+          name: ${{ matrix.variant == 'gms' && 'Metrolist-Pro-with-Google-Cast' || 'Metrolist-Pro' }}
           path: app/build/outputs/apk/${{ matrix.variant }}/release/out/*
 
   build_debug:
@@ -155,8 +155,8 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew --console=plain assemble${{ matrix.variantName }}Debug --warning-mode summary
         env:
-          METROLIST_APPLICATION_ID: com.metrolist.music
-          METROLIST_APP_NAME: Metrolist Pro Nightly
+          METROLIST_APPLICATION_ID: com.metrolist.pro
+          METROLIST_APP_NAME: Metrolist Pro
           METROLIST_BUILD_COMMIT: ${{ github.sha }}
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
@@ -166,7 +166,7 @@ jobs:
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.variant == 'gms' && 'app-debug-gms' || 'app-debug' }}
+          name: ${{ matrix.variant == 'gms' && 'Metrolist-Pro-debug-gms' || 'Metrolist-Pro-debug' }}
           path: app/build/outputs/apk/${{ matrix.variant }}/debug/*.apk
 
   publish_nightly:
@@ -181,14 +181,14 @@ jobs:
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: app-with-Google-Cast
+          name: Metrolist-Pro-with-Google-Cast
           path: release-artifact
 
       - name: Download Debug APK
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: app-debug-gms
+          name: Metrolist-Pro-debug-gms
           path: debug-artifact
 
       - name: Publish Nightly Release
@@ -199,11 +199,11 @@ jobs:
           mkdir -p nightly_files
 
           if [ -d "release-artifact" ]; then
-            find release-artifact -name "*.apk" -exec cp {} nightly_files/Metrolist-with-Google-Cast.apk \;
+            find release-artifact -name "*.apk" -exec cp {} nightly_files/Metrolist-Pro-with-Google-Cast.apk \;
           fi
 
           if [ -d "debug-artifact" ]; then
-            find debug-artifact -name "*.apk" -exec cp {} nightly_files/Metrolist-with-Google-Cast-debug.apk \;
+            find debug-artifact -name "*.apk" -exec cp {} nightly_files/Metrolist-Pro-with-Google-Cast-debug.apk \;
           fi
 
           ATTACHMENTS=$(find nightly_files -name "*.apk")

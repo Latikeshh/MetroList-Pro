@@ -103,9 +103,9 @@ private data class CommunityLink(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private val leadDeveloper = Contributor(
-    name = "Mo Agamy",
+    name = "Latikesh Marathe",
     roleRes = R.string.credits_lead_developer,
-    githubHandle = "mostafaalagamy",
+    githubHandle = "Latikeshh",
     polygon = MaterialShapes.Cookie9Sided,
     favoriteSongVideoId = "Mh2JWGWvy_Y"
 )
@@ -119,8 +119,8 @@ private val collaborators = listOf(
 private val communityLinks = listOf(
     CommunityLink(R.string.credits_discord, R.drawable.discord, "https://discord.com/invite/zrdbeRG2Mt"),
     CommunityLink(R.string.credits_telegram, R.drawable.telegram, "https://t.me/metrolistapp"),
-    CommunityLink(R.string.credits_view_repo, R.drawable.github, "https://github.com/MetrolistGroup/Metrolist"),
-    CommunityLink(R.string.credits_license_name, R.drawable.info, "https://github.com/MetrolistGroup/Metrolist/blob/main/LICENSE")
+    CommunityLink(R.string.credits_view_repo, R.drawable.github, "https://github.com/Latikeshh/MetroList-Pro"),
+    CommunityLink(R.string.credits_license_name, R.drawable.info, "https://github.com/Latikeshh/MetroList-Pro/blob/main/LICENSE")
 )
 
 private fun handleEasterEggClick(
@@ -191,19 +191,19 @@ private fun DeveloperSocials(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         FilledTonalButton(
-            onClick = { uriHandler.openUri("https://metrolist.cc") },
+            onClick = { uriHandler.openUri("https://github.com/Latikeshh/MetroList-Pro") },
             modifier = Modifier.weight(1f).height(48.dp)
         ) {
             Icon(painterResource(R.drawable.language), contentDescription = null)
         }
         FilledTonalButton(
-            onClick = { uriHandler.openUri("https://github.com/mostafaalagamy") },
+            onClick = { uriHandler.openUri("https://github.com/Latikeshh") },
             modifier = Modifier.weight(1f).height(48.dp)
         ) {
             Icon(painterResource(R.drawable.github), contentDescription = null)
         }
         FilledTonalButton(
-            onClick = { uriHandler.openUri("https://www.instagram.com/mostafaalagamy") },
+            onClick = { uriHandler.openUri("https://www.instagram.com/latikesh0") },
             modifier = Modifier.weight(1f).height(48.dp)
         ) {
             Icon(painterResource(R.drawable.instagram), contentDescription = null)
@@ -390,7 +390,7 @@ fun AboutScreen(
                 Spacer(Modifier.height(16.dp))
                 
                 Button(
-                    onClick = { uriHandler.openUri("https://buymeacoffee.com/mostafaalagamy") },
+                    onClick = { uriHandler.openUri("https://github.com/sponsors/Latikeshh") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(
@@ -487,16 +487,7 @@ fun AboutScreen(
             }
         )
 
-        Spacer(Modifier.height(48.dp))
-        
-        Text(
-            text = stringResource(R.string.stands_with_palestine),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        
-        Spacer(Modifier.height(48.dp))
+        Spacer(Modifier.height(32.dp))
     }
 
     TopAppBar(
