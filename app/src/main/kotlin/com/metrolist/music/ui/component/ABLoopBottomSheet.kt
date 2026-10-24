@@ -52,6 +52,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.music.utils.LatikeshExporter
 import com.metrolist.music.utils.formatPreciseTime
 import kotlinx.coroutines.delay
 
@@ -101,7 +103,7 @@ fun ABLoopBottomSheet(
 
     Column(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -202,8 +204,8 @@ fun ABLoopBottomSheet(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Interactive Timeline Canvas
-                ABLoopTimeline(
+                // Single Unified Interactive Primary Timeline
+                PrimaryABLoopTimeline(
                     currentPosition = currentPosition,
                     duration = duration,
                     pointA = pointA,
@@ -212,31 +214,80 @@ fun ABLoopBottomSheet(
                         player.seekTo(targetMs)
                         currentPosition = targetMs
                     },
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Interactive Dual Range Slider for Boundary Adjustment
-                RangeSlider(
-                    value = effectiveA.toFloat()..effectiveB.toFloat(),
-                    onValueChange = { range ->
-                        val newA = range.start.toLong()
-                        val newB = range.endInclusive.toLong()
+                    onSetPointA = { newA ->
                         playerConnection.setAbLoopPointA(newA)
+                    },
+                    onSetPointB = { newB ->
                         playerConnection.setAbLoopPointB(newB)
                     },
-                    valueRange = 0f..duration.toFloat(),
-                    colors = SliderDefaults.colors(
-                        thumbColor = MaterialTheme.colorScheme.primary,
-                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
+
+        // Action Row for Play & Download Selected Area (when Point A and Point B are both set)
+        if (pointA != null && pointB != null && pointA!! < pointB!!) {
+            val context = LocalContext.current
+            val currentMediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // Play Selected Area Button
+                Button(
+                    onClick = {
+                        player.seekTo(pointA!!)
+                        playerConnection.setAbLoopEnabled(true)
+                        player.play()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                    modifier = Modifier.weight(1f).height(44.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.play),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp).padding(end = 4.dp),
+                    )
+                    Text(
+                        text = "Play",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+
+                // Download Selected Area Button
+                OutlinedButton(
+                    onClick = {
+                        currentMediaMetadata?.let { metadata ->
+                            LatikeshExporter.exportTrimmedToPublicStorage(
+                                context = context,
+                                mediaMetadata = metadata,
+                                startMs = pointA!!,
+                                endMs = pointB!!,
+                            )
+                        }
+                    },
+                    modifier = Modifier.weight(1f).height(44.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.download),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp).padding(end = 4.dp),
+                    )
+                    Text(
+                        text = "Download Clip",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
         // Validation Error Banner if Start >= End
         if (isInvalidRange) {
@@ -406,122 +457,204 @@ fun ABLoopBottomSheet(
 }
 
 /**
- * Interactive Timeline Canvas Component rendering Point A, Point B, highlighted loop band, and playhead.
+ * Single primary interactive timeline component for the A-B Loop Editor.
+ * Displays Point A start marker, Point B end marker, highlighted A-B region,
+ * and current playback playhead on a single timeline.
  */
 @Composable
-private fun ABLoopTimeline(
+private fun PrimaryABLoopTimeline(
     currentPosition: Long,
     duration: Long,
     pointA: Long?,
     pointB: Long?,
     onSeek: (Long) -> Unit,
+    onSetPointA: (Long) -> Unit,
+    onSetPointB: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val safeDuration = if (duration > 0) duration else 180000L
     val effectiveA = pointA ?: 0L
     val effectiveB = pointB ?: safeDuration
 
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .padding(horizontal = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        val widthPx = constraints.maxWidth.toFloat()
-        val heightPx = constraints.maxHeight.toFloat()
-        val trackY = heightPx / 2f
-
-        val posFraction = (currentPosition.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
-        val aFraction = (effectiveA.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
-        val bFraction = (effectiveB.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
-
-        val posX = widthPx * posFraction
-        val aX = widthPx * aFraction
-        val bX = widthPx * bFraction
-
-        val primaryColor = MaterialTheme.colorScheme.primary
-        val secondaryColor = MaterialTheme.colorScheme.secondary
-        val trackColor = MaterialTheme.colorScheme.surfaceVariant
-        val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-
-        Canvas(
+    Column(modifier = modifier.fillMaxWidth()) {
+        // Badges row showing A and B timestamps above the timeline
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(safeDuration, widthPx) {
-                    detectTapGestures { offset ->
-                        val tapFraction = (offset.x / widthPx).coerceIn(0f, 1f)
-                        val targetMs = (tapFraction * safeDuration).toLong()
-                        onSeek(targetMs)
-                    }
-                }
+                .fillMaxWidth()
+                .height(22.dp)
+                .padding(horizontal = 8.dp),
         ) {
-            // 1. Draw Inactive Background Track
-            drawLine(
-                color = trackColor,
-                start = Offset(0f, trackY),
-                end = Offset(widthPx, trackY),
-                strokeWidth = 8.dp.toPx(),
-                cap = StrokeCap.Round,
-            )
+            val aFrac = (effectiveA.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
+            val bFrac = (effectiveB.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
 
-            // 2. Draw Highlighted Loop Range Band (between A and B)
-            if (pointA != null || pointB != null) {
-                drawLine(
-                    color = primaryColor.copy(alpha = 0.45f),
-                    start = Offset(aX, trackY),
-                    end = Offset(bX, trackY),
-                    strokeWidth = 12.dp.toPx(),
-                    cap = StrokeCap.Square,
-                )
-            }
-
-            // 3. Draw Marker A Pin (Start Boundary)
             if (pointA != null) {
-                drawLine(
-                    color = primaryColor,
-                    start = Offset(aX, trackY - 16.dp.toPx()),
-                    end = Offset(aX, trackY + 16.dp.toPx()),
-                    strokeWidth = 4.dp.toPx(),
-                    cap = StrokeCap.Round,
-                )
-                drawCircle(
-                    color = primaryColor,
-                    center = Offset(aX, trackY - 16.dp.toPx()),
-                    radius = 6.dp.toPx(),
-                )
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Text(
+                        text = "A: ${formatPreciseTime(effectiveA)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .padding(start = (aFrac * 240).dp.coerceIn(0.dp, 240.dp))
+                            .background(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                RoundedCornerShape(4.dp),
+                            )
+                            .padding(horizontal = 4.dp, vertical = 1.dp),
+                    )
+                }
             }
 
-            // 4. Draw Marker B Pin (End Boundary)
             if (pointB != null) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Text(
+                        text = "B: ${formatPreciseTime(effectiveB)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier
+                            .padding(start = (bFrac * 240).dp.coerceIn(0.dp, 240.dp))
+                            .background(
+                                MaterialTheme.colorScheme.secondaryContainer,
+                                RoundedCornerShape(4.dp),
+                            )
+                            .padding(horizontal = 4.dp, vertical = 1.dp),
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Interactive Timeline Box
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            val widthPx = constraints.maxWidth.toFloat()
+            val heightPx = constraints.maxHeight.toFloat()
+            val trackY = heightPx / 2f
+
+            val posFraction = (currentPosition.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
+            val aFraction = (effectiveA.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
+            val bFraction = (effectiveB.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
+
+            val posX = widthPx * posFraction
+            val aX = widthPx * aFraction
+            val bX = widthPx * bFraction
+
+            val primaryColor = MaterialTheme.colorScheme.primary
+            val secondaryColor = MaterialTheme.colorScheme.secondary
+            val trackColor = MaterialTheme.colorScheme.surfaceVariant
+            val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(safeDuration, widthPx) {
+                        detectTapGestures { offset ->
+                            val tapFraction = (offset.x / widthPx).coerceIn(0f, 1f)
+                            val targetMs = (tapFraction * safeDuration).toLong()
+                            onSeek(targetMs)
+                        }
+                    },
+            ) {
+                // 1. Background Track
                 drawLine(
-                    color = secondaryColor,
-                    start = Offset(bX, trackY - 16.dp.toPx()),
-                    end = Offset(bX, trackY + 16.dp.toPx()),
-                    strokeWidth = 4.dp.toPx(),
+                    color = trackColor,
+                    start = Offset(0f, trackY),
+                    end = Offset(widthPx, trackY),
+                    strokeWidth = 8.dp.toPx(),
+                    cap = StrokeCap.Round,
+                )
+
+                // 2. Highlighted Loop Range (between A and B)
+                if (pointA != null || pointB != null) {
+                    drawLine(
+                        color = primaryColor.copy(alpha = 0.45f),
+                        start = Offset(aX, trackY),
+                        end = Offset(bX, trackY),
+                        strokeWidth = 10.dp.toPx(),
+                        cap = StrokeCap.Square,
+                    )
+                }
+
+                // 3. Point A Marker Pin (Start Boundary)
+                if (pointA != null) {
+                    drawLine(
+                        color = primaryColor,
+                        start = Offset(aX, trackY - 14.dp.toPx()),
+                        end = Offset(aX, trackY + 14.dp.toPx()),
+                        strokeWidth = 4.dp.toPx(),
+                        cap = StrokeCap.Round,
+                    )
+                    drawCircle(
+                        color = primaryColor,
+                        center = Offset(aX, trackY - 14.dp.toPx()),
+                        radius = 6.dp.toPx(),
+                    )
+                }
+
+                // 4. Point B Marker Pin (End Boundary)
+                if (pointB != null) {
+                    drawLine(
+                        color = secondaryColor,
+                        start = Offset(bX, trackY - 14.dp.toPx()),
+                        end = Offset(bX, trackY + 14.dp.toPx()),
+                        strokeWidth = 4.dp.toPx(),
+                        cap = StrokeCap.Round,
+                    )
+                    drawCircle(
+                        color = secondaryColor,
+                        center = Offset(bX, trackY + 14.dp.toPx()),
+                        radius = 6.dp.toPx(),
+                    )
+                }
+
+                // 5. Playhead (Current Position Indicator)
+                drawLine(
+                    color = onSurfaceColor,
+                    start = Offset(posX, trackY - 10.dp.toPx()),
+                    end = Offset(posX, trackY + 10.dp.toPx()),
+                    strokeWidth = 3.dp.toPx(),
                     cap = StrokeCap.Round,
                 )
                 drawCircle(
-                    color = secondaryColor,
-                    center = Offset(bX, trackY + 16.dp.toPx()),
-                    radius = 6.dp.toPx(),
+                    color = onSurfaceColor,
+                    center = Offset(posX, trackY),
+                    radius = 5.dp.toPx(),
                 )
             }
-
-            // 5. Draw Playhead (Current Playback Position)
-            drawLine(
-                color = onSurfaceColor,
-                start = Offset(posX, trackY - 10.dp.toPx()),
-                end = Offset(posX, trackY + 10.dp.toPx()),
-                strokeWidth = 3.dp.toPx(),
-                cap = StrokeCap.Round,
-            )
-            drawCircle(
-                color = onSurfaceColor,
-                center = Offset(posX, trackY),
-                radius = 5.dp.toPx(),
-            )
         }
+
+        // Single interactive Dual RangeSlider for boundary control
+        RangeSlider(
+            value = effectiveA.toFloat()..effectiveB.toFloat(),
+            onValueChange = { range ->
+                val newA = range.start.toLong()
+                val newB = range.endInclusive.toLong()
+                onSetPointA(newA)
+                onSetPointB(newB)
+            },
+            valueRange = 0f..safeDuration.toFloat(),
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+        )
     }
 }
 

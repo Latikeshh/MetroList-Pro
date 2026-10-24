@@ -116,28 +116,28 @@ private fun DrawScope.drawTrack(
         val loopStartPx = sliderStart.x + (sliderEnd.x - sliderStart.x) * abLoopRange.start.coerceIn(0f, 1f)
         val loopEndPx = sliderStart.x + (sliderEnd.x - sliderStart.x) * abLoopRange.endInclusive.coerceIn(0f, 1f)
 
-        val accentColor = if (isAbLoopEnabled) Color(0xFFFFC107) else Color.Gray
-        val alpha = if (isAbLoopEnabled) 0.85f else 0.4f
+        val highlightColor = if (isAbLoopEnabled) activeTrackColor else inactiveTrackColor
+        val alpha = if (isAbLoopEnabled) 0.85f else 0.35f
 
-        // Draw highlighted interval segment
+        // Draw highlighted interval segment directly on original progress bar
         drawLine(
-            accentColor.copy(alpha = alpha),
+            highlightColor.copy(alpha = alpha),
             Offset(loopStartPx, center.y),
             Offset(loopEndPx, center.y),
-            trackStrokeWidth * 0.85f,
-            StrokeCap.Square
+            trackStrokeWidth,
+            StrokeCap.Round
         )
 
         // Draw Boundary Pins for Point A and Point B
         drawCircle(
-            color = accentColor,
+            color = highlightColor.copy(alpha = if (isAbLoopEnabled) 1.0f else 0.6f),
             center = Offset(loopStartPx, center.y),
-            radius = (trackStrokeWidth / 2f) + 2.dp.toPx()
+            radius = (trackStrokeWidth / 2f) + 2.5.dp.toPx()
         )
         drawCircle(
-            color = accentColor,
+            color = highlightColor.copy(alpha = if (isAbLoopEnabled) 1.0f else 0.6f),
             center = Offset(loopEndPx, center.y),
-            radius = (trackStrokeWidth / 2f) + 2.dp.toPx()
+            radius = (trackStrokeWidth / 2f) + 2.5.dp.toPx()
         )
     }
 

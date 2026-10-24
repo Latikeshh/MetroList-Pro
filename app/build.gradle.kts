@@ -103,10 +103,10 @@ android {
             keyPassword = debugKeyPassword
         }
         create("release") {
-            storeFile = file("keystore/release.keystore")
-            storePassword = System.getenv("STORE_PASSWORD")
-            keyAlias = System.getenv("KEY_ALIAS")
-            keyPassword = System.getenv("KEY_PASSWORD")
+            storeFile = file("release.keystore")
+            storePassword = System.getenv("STORE_PASSWORD") ?: "metrolist123"
+            keyAlias = System.getenv("KEY_ALIAS") ?: "metrolist"
+            keyPassword = System.getenv("KEY_PASSWORD") ?: "metrolist123"
         }
         getByName("debug") {
             keyAlias = "androiddebugkey"
@@ -118,6 +118,7 @@ android {
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             isCrunchPngs = false

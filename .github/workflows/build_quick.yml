@@ -46,45 +46,19 @@ jobs:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
 
-      - name: Sign & Prepare Release APK
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: Prepare Release APK Artifact
         run: |
           OUTPUT_DIR="app/build/outputs/apk/foss/release"
           mkdir -p "$OUTPUT_DIR/out"
           TARGET_NAME="app-universal-test-release.apk"
 
           BUILD_APK=$(find "$OUTPUT_DIR" -maxdepth 1 -name "*.apk" | head -n 1)
-          if [ -z "$BUILD_APK" ]; then
-            echo "No built APK found in $OUTPUT_DIR"
-            exit 1
-          fi
-
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "Attempting to decode KEYSTORE secret..."
-            python3 -c "import base64, os, re; raw = os.environ.get('KEYSTORE_BASE64', ''); b64 = re.sub(r'[^A-Za-z0-9+/=]', '', raw); open('temp_release.keystore', 'wb').write(base64.b64decode(b64))" 2>/dev/null || true
-
-            if [ -s temp_release.keystore ]; then
-              echo "Signing release APK with native apksigner..."
-              $ANDROID_HOME/build-tools/35.0.0/apksigner sign \
-                --ks temp_release.keystore \
-                --ks-key-alias "$KEY_ALIAS" \
-                --ks-pass "pass:$KEYSTORE_PASSWORD" \
-                --key-pass "pass:$KEY_PASSWORD" \
-                --out "$OUTPUT_DIR/out/$TARGET_NAME" \
-                "$BUILD_APK" || cp "$BUILD_APK" "$OUTPUT_DIR/out/$TARGET_NAME"
-              rm -f temp_release.keystore
-              echo "APK prepared successfully in $OUTPUT_DIR/out/$TARGET_NAME"
-            else
-              echo "KEYSTORE secret could not be decoded — copying built release APK..."
-              cp "$BUILD_APK" "$OUTPUT_DIR/out/$TARGET_NAME"
-            fi
-          else
-            echo "KEYSTORE secret not set — copying built release APK..."
+          if [ -n "$BUILD_APK" ]; then
             cp "$BUILD_APK" "$OUTPUT_DIR/out/$TARGET_NAME"
+            echo "Release APK prepared: $OUTPUT_DIR/out/$TARGET_NAME"
+          else
+            echo "No APK found in $OUTPUT_DIR"
+            exit 1
           fi
 
       - name: Upload Signed APK
