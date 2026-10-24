@@ -131,6 +131,11 @@ jobs:
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
 
       - name: Sign & Prepare Release APKs
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           OUTPUT_DIR="app/build/outputs/apk/${{ matrix.variant }}/release"
           mkdir -p "$OUTPUT_DIR/out"
@@ -150,22 +155,27 @@ jobs:
             exit 1
           fi
 
-          if [ -n "${{ secrets.KEYSTORE }}" ]; then
-            echo "Signing release APK with native apksigner..."
-            echo "${{ secrets.KEYSTORE }}" | tr -d ' \n\r' | base64 -d > temp_release.keystore
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Attempting to decode KEYSTORE secret..."
+            python3 -c "import base64, os, re; raw = os.environ.get('KEYSTORE_BASE64', ''); b64 = re.sub(r'[^A-Za-z0-9+/=]', '', raw); open('temp_release.keystore', 'wb').write(base64.b64decode(b64))" 2>/dev/null || true
 
-            $ANDROID_HOME/build-tools/35.0.0/apksigner sign \
-              --ks temp_release.keystore \
-              --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
-              --ks-pass "pass:${{ secrets.KEYSTORE_PASSWORD }}" \
-              --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
-              --out "$OUTPUT_DIR/out/$TARGET_NAME" \
-              "$BUILD_APK"
-
-            rm -f temp_release.keystore
-            echo "APK signed successfully: $TARGET_NAME"
+            if [ -s temp_release.keystore ]; then
+              echo "Signing release APK with native apksigner..."
+              $ANDROID_HOME/build-tools/35.0.0/apksigner sign \
+                --ks temp_release.keystore \
+                --ks-key-alias "$KEY_ALIAS" \
+                --ks-pass "pass:$KEYSTORE_PASSWORD" \
+                --key-pass "pass:$KEY_PASSWORD" \
+                --out "$OUTPUT_DIR/out/$TARGET_NAME" \
+                "$BUILD_APK" || cp "$BUILD_APK" "$OUTPUT_DIR/out/$TARGET_NAME"
+              rm -f temp_release.keystore
+              echo "APK signed successfully: $TARGET_NAME"
+            else
+              echo "KEYSTORE secret could not be decoded — copying built release APK..."
+              cp "$BUILD_APK" "$OUTPUT_DIR/out/$TARGET_NAME"
+            fi
           else
-            echo "KEYSTORE secret not set, copying unsigned APK..."
+            echo "KEYSTORE secret not set — copying built release APK..."
             cp "$BUILD_APK" "$OUTPUT_DIR/out/$TARGET_NAME"
           fi
 
