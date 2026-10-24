@@ -1,3 +1,10 @@
+---v2026.10.24
+# Metrolist Pro 2026.10.24 Release
+- Renamed application to Metrolist Pro
+- Integrated custom Material 3 non-forced update dialog
+- Refined A-B Section Looper UI with full-screen activity layout and audio clip export
+- Configured native Gradle release signing
+
 ---v13.7.0
 # KMP status update
 Metrolist-KMP remains in alpha, but tester feedback has been very positive. To try it, join our Discord and donate at least $1 to support development.

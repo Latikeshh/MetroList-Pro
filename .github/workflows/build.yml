@@ -198,12 +198,17 @@ jobs:
         run: |
           mkdir -p nightly_files
 
-          if [ -d "release-artifact" ]; then
-            find release-artifact -name "*.apk" -exec cp {} nightly_files/Metrolist-Pro-with-Google-Cast.apk \;
-          fi
+          RELEASE_APK=$(find release-artifact -name "*.apk" 2>/dev/null | head -n 1)
 
-          if [ -d "debug-artifact" ]; then
-            find debug-artifact -name "*.apk" -exec cp {} nightly_files/Metrolist-Pro-with-Google-Cast-debug.apk \;
+          if [ -n "$RELEASE_APK" ]; then
+            echo "Release APK found! Publishing Release version..."
+            cp "$RELEASE_APK" nightly_files/Metrolist-Pro-with-Google-Cast.apk
+          elif [ -d "debug-artifact" ]; then
+            DEBUG_APK=$(find debug-artifact -name "*.apk" 2>/dev/null | head -n 1)
+            if [ -n "$DEBUG_APK" ]; then
+              echo "Release APK not found. Falling back to Debug version..."
+              cp "$DEBUG_APK" nightly_files/Metrolist-Pro-with-Google-Cast-debug.apk
+            fi
           fi
 
           ATTACHMENTS=$(find nightly_files -name "*.apk")
