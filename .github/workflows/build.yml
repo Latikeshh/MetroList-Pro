@@ -88,7 +88,7 @@ jobs:
 
           if [ -n "${{ secrets.KEYSTORE }}" ]; then
             echo "Signing release APK with native apksigner..."
-            echo "${{ secrets.KEYSTORE }}" | base64 -d > temp_release.keystore
+            echo "${{ secrets.KEYSTORE }}" | tr -d ' \n\r' | base64 -d > temp_release.keystore
 
             $ANDROID_HOME/build-tools/35.0.0/apksigner sign \
               --ks temp_release.keystore \
@@ -187,24 +187,46 @@ jobs:
 
   publish_nightly:
     name: Publish Nightly Release
-    if: github.event_name == 'push'
+    if: always() && github.event_name == 'push' && (needs.build_release.result == 'success' || needs.build_debug.result == 'success')
     needs: [build_release, build_debug]
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - name: Download Signed APK
+      - name: Download Release APK
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: app-with-Google-Cast
-          path: nightly
+          path: release-artifact
+
+      - name: Download Debug APK
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: app-debug-gms
+          path: debug-artifact
 
       - name: Publish Nightly Release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          mv nightly/app-universal-with-Google-Cast.apk nightly/Metrolist-with-Google-Cast.apk
+          mkdir -p nightly_files
+
+          if [ -d "release-artifact" ]; then
+            find release-artifact -name "*.apk" -exec cp {} nightly_files/Metrolist-with-Google-Cast.apk \;
+          fi
+
+          if [ -d "debug-artifact" ]; then
+            find debug-artifact -name "*.apk" -exec cp {} nightly_files/Metrolist-with-Google-Cast-debug.apk \;
+          fi
+
+          ATTACHMENTS=$(find nightly_files -name "*.apk")
+          if [ -z "$ATTACHMENTS" ]; then
+            echo "No APK artifacts available to release."
+            exit 1
+          fi
 
           PREVIOUS_NIGHTLY_SHA=$(gh release view nightly --json targetCommitish --jq .targetCommitish 2>/dev/null || true)
           {
@@ -224,9 +246,9 @@ jobs:
           fi
 
           gh release create nightly \
-            nightly/Metrolist-with-Google-Cast.apk \
+            $ATTACHMENTS \
             --target "$GITHUB_SHA" \
-            --title "Metrolist Nightly" \
+            --title "Metrolist Pro Nightly" \
             --notes-file nightly-notes.md \
             --generate-notes \
             --prerelease \
