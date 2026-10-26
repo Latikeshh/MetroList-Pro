@@ -892,6 +892,9 @@
     <string name="exported_to_storage">Saved to Music/Metrolist</string>
     <string name="already_exported_to_storage">File already exists in Music/Metrolist</string>
     <string name="export_audio_failed">Failed to export audio file</string>
+    <string name="export_format">Audio export format</string>
+    <string name="export_format_m4a">M4A / AAC (Original Best Quality)</string>
+    <string name="export_format_mp3">MP3 (Maximum Device Compatibility)</string>
 
     <!-- A-B Section Looper -->
     <string name="ab_looper">A-B Section Looper</string>
